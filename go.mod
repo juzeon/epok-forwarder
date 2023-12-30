@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/1lann/udp-forward v0.0.0-20191015034046-6b774a53ea39
+	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
 	github.com/samber/lo v1.39.0
 	gopkg.in/yaml.v3 v3.0.1
 )

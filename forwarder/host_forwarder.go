@@ -18,7 +18,7 @@ type HostForwarder struct {
 }
 
 func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfig data.Host,
-	registerWebForwarderFunc data.RegisterWebForwarderFunc) (*HostForwarder, error) {
+	webForwarder *WebForwarder) (*HostForwarder, error) {
 	addr, err := net.LookupHost(hostConfig.Host)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfi
 			}
 		case data.ForwardTypeWeb:
 			for _, hostname := range forward.ForwardWeb.Hostnames {
-				registerWebForwarderFunc(hostname, hf.dstIP, hostConfig.Http, hostConfig.Https)
+				webForwarder.RegisterTarget(hostname, hf.dstIP, hostConfig.Http, hostConfig.Https)
 			}
 		}
 	}
