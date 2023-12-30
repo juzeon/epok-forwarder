@@ -1,10 +1,13 @@
 package forwarder
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	"github.com/IGLOU-EU/go-wildcard/v2"
 	"github.com/juzeon/epok-forwarder/data"
 	"github.com/samber/lo"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -12,6 +15,7 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type WebForwarder struct {
@@ -49,6 +53,61 @@ func (o *WebForwarder) StartAsync() error {
 	return nil
 }
 func (o *WebForwarder) startHttpsAsync() error {
+	l, err := net.Listen("tcp", ":"+strconv.Itoa(o.baseConfig.Https))
+	if err != nil {
+		return err
+	}
+	handleConnection := func(clientConn net.Conn) {
+		defer clientConn.Close()
+		if err := clientConn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			slog.Warn("Cannot set read deadline", "err", err)
+			return
+		}
+		clientHello, clientReader, err := peekClientHello(clientConn)
+		if err != nil {
+			slog.Warn("Cannot peek client hello", "err", err)
+			return
+		}
+		if err := clientConn.SetReadDeadline(time.Time{}); err != nil {
+			slog.Warn("Cannot set read deadline", "err", err)
+			return
+		}
+		target, ok := lo.Find(o.targets, func(item data.WebForwardTarget) bool {
+			return wildcard.Match(item.Hostname, clientHello.ServerName)
+		})
+		if !ok {
+			slog.Warn("No hostname matches", "hostname", clientHello.ServerName)
+		}
+		backendConn, err := net.DialTimeout("tcp", net.JoinHostPort(target.DstIP, strconv.Itoa(target.DstHttpsPort)),
+			5*time.Second)
+		if err != nil {
+			slog.Warn("Cannot dial backend", "err", err)
+			return
+		}
+		defer backendConn.Close()
+		go func() {
+			io.Copy(clientConn, backendConn)
+			clientConn.(*net.TCPConn).CloseWrite()
+		}()
+		go func() {
+			io.Copy(backendConn, clientReader)
+			backendConn.(*net.TCPConn).CloseWrite()
+		}()
+	}
+	go func() {
+		<-o.ctx.Done()
+		l.Close()
+	}()
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				slog.Error("Cannot accept https conn", "error", err)
+				break
+			}
+			go handleConnection(conn)
+		}
+	}()
 	return nil
 }
 func (o *WebForwarder) startHttpAsync() error {
@@ -102,4 +161,41 @@ func (o *WebForwarder) startHttpAsync() error {
 		}
 	}()
 	return nil
+}
+
+func peekClientHello(reader io.Reader) (*tls.ClientHelloInfo, io.Reader, error) {
+	peekedBytes := new(bytes.Buffer)
+	hello, err := readClientHello(io.TeeReader(reader, peekedBytes))
+	if err != nil {
+		return nil, nil, err
+	}
+	return hello, io.MultiReader(peekedBytes, reader), nil
+}
+
+type readOnlyConn struct {
+	reader io.Reader
+}
+
+func (conn readOnlyConn) Read(p []byte) (int, error)         { return conn.reader.Read(p) }
+func (conn readOnlyConn) Write(p []byte) (int, error)        { return 0, io.ErrClosedPipe }
+func (conn readOnlyConn) Close() error                       { return nil }
+func (conn readOnlyConn) LocalAddr() net.Addr                { return nil }
+func (conn readOnlyConn) RemoteAddr() net.Addr               { return nil }
+func (conn readOnlyConn) SetDeadline(t time.Time) error      { return nil }
+func (conn readOnlyConn) SetReadDeadline(t time.Time) error  { return nil }
+func (conn readOnlyConn) SetWriteDeadline(t time.Time) error { return nil }
+
+func readClientHello(reader io.Reader) (*tls.ClientHelloInfo, error) {
+	var hello *tls.ClientHelloInfo
+	err := tls.Server(readOnlyConn{reader: reader}, &tls.Config{
+		GetConfigForClient: func(argHello *tls.ClientHelloInfo) (*tls.Config, error) {
+			hello = new(tls.ClientHelloInfo)
+			*hello = *argHello
+			return nil, nil
+		},
+	}).Handshake()
+	if hello == nil {
+		return nil, err
+	}
+	return hello, nil
 }
