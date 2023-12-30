@@ -40,7 +40,7 @@ func (o *WebForwarder) RegisterTarget(hostname string, dstIP string, dstHttpPort
 		DstHttpPort:  dstHttpPort,
 		DstHttpsPort: dstHttpsPort,
 	}
-	slog.Info("Register http forwarder", "target", target)
+	slog.Info("Register web forwarder", "target", target)
 	o.targets = append(o.targets, target)
 }
 func (o *WebForwarder) StartAsync() error {
