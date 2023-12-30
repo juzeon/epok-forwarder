@@ -32,7 +32,7 @@ hosts:
         port_range: 700-710,715,716,720-730 # The server and the host listen on the same port numbers. Inclusive on both sides
       - type: web # Host-based for HTTP, SNI-based for HTTPS
         hostnames:
-          - *example.com # Will match example.com, a.example.com, a.b.c.example.com, etc
+          - *example.com # Will match example.com, a.example.com, a.b.c.example.com, hello-example.com, etc
           - ?gg.com # Will match egg.com, ogg.com, etc
 ```
 
