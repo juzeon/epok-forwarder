@@ -58,7 +58,6 @@ func (o *WebForwarder) startHttpsAsync() error {
 		return err
 	}
 	handleConnection := func(clientConn net.Conn) {
-		defer clientConn.Close()
 		if err := clientConn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 			slog.Warn("Cannot set read deadline", "err", err)
 			return
@@ -77,21 +76,25 @@ func (o *WebForwarder) startHttpsAsync() error {
 		})
 		if !ok {
 			slog.Warn("No hostname matches", "hostname", clientHello.ServerName)
+			return
 		}
-		backendConn, err := net.DialTimeout("tcp", net.JoinHostPort(target.DstIP, strconv.Itoa(target.DstHttpsPort)),
+		dest := net.JoinHostPort(target.DstIP, strconv.Itoa(target.DstHttpsPort))
+		slog.Info("Serve https", "dest", dest, "hostname", clientHello.ServerName)
+		backendConn, err := net.DialTimeout("tcp", dest,
 			5*time.Second)
 		if err != nil {
 			slog.Warn("Cannot dial backend", "err", err)
 			return
 		}
-		defer backendConn.Close()
 		go func() {
 			io.Copy(clientConn, backendConn)
-			clientConn.(*net.TCPConn).CloseWrite()
+			clientConn.Close()
+			backendConn.Close()
 		}()
 		go func() {
 			io.Copy(backendConn, clientReader)
-			backendConn.(*net.TCPConn).CloseWrite()
+			clientConn.Close()
+			backendConn.Close()
 		}()
 	}
 	go func() {
@@ -187,13 +190,16 @@ func (conn readOnlyConn) SetWriteDeadline(t time.Time) error { return nil }
 
 func readClientHello(reader io.Reader) (*tls.ClientHelloInfo, error) {
 	var hello *tls.ClientHelloInfo
+	serverName := ""
 	err := tls.Server(readOnlyConn{reader: reader}, &tls.Config{
 		GetConfigForClient: func(argHello *tls.ClientHelloInfo) (*tls.Config, error) {
 			hello = new(tls.ClientHelloInfo)
 			*hello = *argHello
+			serverName = hello.ServerName
 			return nil, nil
 		},
 	}).Handshake()
+	slog.Info("serverName: " + serverName)
 	if hello == nil {
 		return nil, err
 	}
