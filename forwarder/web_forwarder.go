@@ -190,16 +190,13 @@ func (conn readOnlyConn) SetWriteDeadline(t time.Time) error { return nil }
 
 func readClientHello(reader io.Reader) (*tls.ClientHelloInfo, error) {
 	var hello *tls.ClientHelloInfo
-	serverName := ""
 	err := tls.Server(readOnlyConn{reader: reader}, &tls.Config{
 		GetConfigForClient: func(argHello *tls.ClientHelloInfo) (*tls.Config, error) {
 			hello = new(tls.ClientHelloInfo)
 			*hello = *argHello
-			serverName = hello.ServerName
 			return nil, nil
 		},
 	}).Handshake()
-	slog.Info("serverName: " + serverName)
 	if hello == nil {
 		return nil, err
 	}
