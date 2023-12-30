@@ -81,13 +81,14 @@ func (o *HostForwarder) forwardTCP(srcPort int, dstPort int) {
 			break
 		}
 		slog.Info("Accept connection", "addr", l.Addr().String())
-		dialedConn, err := (&net.Dialer{}).DialContext(o.ctx, "tcp", o.dstIP+":"+strconv.Itoa(dstPort))
+		dialedConn, err := (&net.Dialer{}).DialContext(o.ctx, "tcp",
+			net.JoinHostPort(o.dstIP, strconv.Itoa(dstPort)))
 		if err != nil {
 			slog.Error("Cannot dial tcp", "error", err)
 			acceptedConn.Close()
 			continue
 		}
-		slog.Info("Dial connection", "addr", o.dstIP+":"+strconv.Itoa(dstPort))
+		slog.Info("Dial connection", "addr", net.JoinHostPort(o.dstIP, strconv.Itoa(dstPort)))
 		go func() {
 			defer acceptedConn.Close()
 			defer dialedConn.Close()

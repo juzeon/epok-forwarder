@@ -125,7 +125,7 @@ func (o *WebForwarder) startHttpAsync() error {
 				handleErr(writer, "no hostname matches "+request.Host)
 				return
 			}
-			dest := "http://" + target.DstIP + ":" + strconv.Itoa(target.DstHttpPort)
+			dest := "http://" + net.JoinHostPort(target.DstIP, strconv.Itoa(target.DstHttpPort))
 			u, err := url.Parse(dest)
 			if err != nil {
 				handleErr(writer, err.Error())
