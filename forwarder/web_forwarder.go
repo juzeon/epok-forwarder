@@ -103,7 +103,7 @@ func (o *WebForwarder) startHttpsAsync() error {
 		for {
 			conn, err := l.Accept()
 			if err != nil {
-				slog.Error("Cannot accept https conn", "error", err)
+				slog.Warn("Cannot accept https conn", "error", err)
 				break
 			}
 			go handleConnection(conn)
@@ -158,7 +158,7 @@ func (o *WebForwarder) startHttpAsync() error {
 	go func() {
 		err = server.Serve(l)
 		if err != nil {
-			slog.Error("Cannot accept web", "error", err)
+			slog.Warn("Cannot accept web", "error", err)
 		}
 	}()
 	return nil

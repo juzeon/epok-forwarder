@@ -51,13 +51,13 @@ func (f ForwardPortRange) GetPorts() ([]int, error) {
 	var ports []int
 	for _, seg := range arr {
 		arr2 := strings.Split(seg, "-")
-		if len(arr2) == 0 {
+		if len(arr2) == 1 {
 			p, err := strconv.Atoi(seg)
 			if err != nil {
 				return nil, err
 			}
 			ports = append(ports, p)
-		} else if len(arr) == 1 {
+		} else if len(arr2) == 2 {
 			start, err := strconv.Atoi(arr2[0])
 			if err != nil {
 				return nil, err

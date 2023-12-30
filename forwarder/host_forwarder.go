@@ -4,6 +4,7 @@ import (
 	"context"
 	udpForwarder "github.com/1lann/udp-forward"
 	"github.com/juzeon/epok-forwarder/data"
+	"github.com/juzeon/epok-forwarder/util"
 	"io"
 	"log/slog"
 	"net"
@@ -56,7 +57,7 @@ func (o *HostForwarder) forwardUDP(srcPort int, dstPort int) {
 	f, err := udpForwarder.Forward(":"+strconv.Itoa(srcPort), o.dstIP+":"+strconv.Itoa(dstPort),
 		udpForwarder.DefaultTimeout)
 	if err != nil {
-		panic(err)
+		util.ErrExit(err)
 	}
 	<-o.ctx.Done()
 	f.Close()
@@ -66,7 +67,7 @@ func (o *HostForwarder) forwardTCP(srcPort int, dstPort int) {
 	slog.Info("Register tcp forwarder", "src-port", srcPort, "dst-port", dstPort, "dst-ip", o.dstIP)
 	l, err := net.Listen("tcp", ":"+strconv.Itoa(srcPort))
 	if err != nil {
-		panic(err)
+		util.ErrExit(err)
 	}
 	go func() {
 		<-o.ctx.Done()
@@ -77,14 +78,14 @@ func (o *HostForwarder) forwardTCP(srcPort int, dstPort int) {
 	for {
 		acceptedConn, err := l.Accept()
 		if err != nil {
-			slog.Error("Cannot accept conn", "error", err)
+			slog.Warn("Cannot accept conn", "error", err)
 			break
 		}
 		slog.Info("Accept connection", "addr", l.Addr().String())
 		dialedConn, err := (&net.Dialer{}).DialContext(o.ctx, "tcp",
 			net.JoinHostPort(o.dstIP, strconv.Itoa(dstPort)))
 		if err != nil {
-			slog.Error("Cannot dial tcp", "error", err)
+			slog.Warn("Cannot dial tcp", "error", err)
 			acceptedConn.Close()
 			continue
 		}
