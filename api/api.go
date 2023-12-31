@@ -70,6 +70,7 @@ func StartServer(configFile string, config data.Config, forwarderIns *forwarder.
 		} else {
 			slog.Info("Started new forwarder")
 			forwarderIns = fwd
+			config = newConfig
 			writer.WriteHeader(200)
 			writer.Write([]byte("ok"))
 			return
