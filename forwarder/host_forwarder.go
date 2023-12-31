@@ -46,7 +46,7 @@ func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfi
 			}
 		case data.ForwardTypeWeb:
 			for _, hostname := range forward.ForwardWeb.Hostnames {
-				webForwarder.RegisterTarget(hostname, hf.dstIP, hostConfig.Http, hostConfig.Https)
+				webForwarder.RegisterTarget(hostname, hf.dstIP, forward.ForwardWeb.Http, forward.ForwardWeb.Https)
 			}
 		}
 	}
