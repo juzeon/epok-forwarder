@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func StartServer(configFile string, config data.Config, forwarderIns *forwarder.Forwarder) error {
@@ -40,6 +41,7 @@ func StartServer(configFile string, config data.Config, forwarderIns *forwarder.
 			writer.Write([]byte(err.Error()))
 			return
 		}
+		time.Sleep(1 * time.Second)
 		slog.Info("Starting new forwarder instance...")
 		if fwd, err := startForwarderWithConfig(newConfig); err != nil {
 			// revert
