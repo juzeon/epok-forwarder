@@ -16,11 +16,6 @@ type Forwarder struct {
 }
 
 func New(config data.Config) (*Forwarder, error) {
-	slog.Info("Validating config...")
-	err := config.Validate()
-	if err != nil {
-		return nil, err
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	webForwarder, err := NewWebForwarder(ctx, config.BaseConfig)
 	if err != nil {

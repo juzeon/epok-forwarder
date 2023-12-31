@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/samber/lo"
+	"gopkg.in/yaml.v3"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -146,4 +148,22 @@ func (o *Config) Validate() error {
 		return errors.New(fmt.Sprintf("duplicate ports to listen on: %v", dup))
 	}
 	return nil
+}
+
+func ReadConfig(configFile string) (Config, error) {
+	var empty Config
+	configData, err := os.ReadFile(configFile)
+	if err != nil {
+		return empty, err
+	}
+	var config Config
+	err = yaml.Unmarshal(configData, &config)
+	if err != nil {
+		return empty, err
+	}
+	err = config.Validate()
+	if err != nil {
+		return empty, err
+	}
+	return config, nil
 }

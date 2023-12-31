@@ -7,7 +7,6 @@ import (
 	"github.com/juzeon/epok-forwarder/data"
 	"github.com/juzeon/epok-forwarder/forwarder"
 	"github.com/juzeon/epok-forwarder/util"
-	"gopkg.in/yaml.v3"
 	"log/slog"
 	"os"
 )
@@ -34,12 +33,7 @@ func main() { // TODO block based on geo
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
-	configData, err := os.ReadFile(flg.configFile)
-	if err != nil {
-		util.ErrExit(err)
-	}
-	var config data.Config
-	err = yaml.Unmarshal(configData, &config)
+	config, err := data.ReadConfig(flg.configFile)
 	if err != nil {
 		util.ErrExit(err)
 	}

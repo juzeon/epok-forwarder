@@ -5,10 +5,8 @@ import (
 	"github.com/juzeon/epok-forwarder/data"
 	"github.com/juzeon/epok-forwarder/forwarder"
 	"github.com/juzeon/epok-forwarder/util"
-	"gopkg.in/yaml.v3"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -30,14 +28,7 @@ func StartServer(configFile string, config data.Config, forwarderIns *forwarder.
 				return
 			}
 		}
-		v, err := os.ReadFile(configFile)
-		if err != nil {
-			writer.WriteHeader(500)
-			writer.Write([]byte(err.Error()))
-			return
-		}
-		var newConfig data.Config
-		err = yaml.Unmarshal(v, &newConfig)
+		newConfig, err := data.ReadConfig(configFile)
 		if err != nil {
 			writer.WriteHeader(500)
 			writer.Write([]byte(err.Error()))
@@ -71,6 +62,7 @@ func StartServer(configFile string, config data.Config, forwarderIns *forwarder.
 			return
 		}
 	}))
+	slog.Info("Start API server on: " + config.API)
 	return http.ListenAndServe(config.API, mux)
 }
 func startForwarderWithConfig(config data.Config) (*forwarder.Forwarder, error) {
