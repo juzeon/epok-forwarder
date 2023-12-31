@@ -30,6 +30,8 @@ type Forward struct {
 	ForwardPort      `yaml:",inline"`
 }
 
+var tmpPortList []int
+
 func (o *Forward) Validate() error {
 	switch o.Type {
 	case ForwardTypeWeb:
@@ -37,7 +39,8 @@ func (o *Forward) Validate() error {
 	case ForwardTypePort:
 		return o.ForwardPort.Validate()
 	case ForwardTypePortRange:
-		_, err := o.ForwardPortRange.GetPorts()
+		ports, err := o.ForwardPortRange.GetPorts()
+		tmpPortList = append(tmpPortList, ports...)
 		return err
 	default:
 		return errors.New("type is not defined: " + o.Type)
@@ -101,18 +104,31 @@ func (o *ForwardPort) Validate() error {
 	if o.Src == 0 || o.Dst == 0 {
 		return errors.New("src or dst not set")
 	}
+	tmpPortList = append(tmpPortList, o.Src)
 	return nil
 }
 
 func (o *Config) Validate() error {
+	tmpPortList = nil
 	if o.Http == 0 {
 		o.Http = 80
 	}
+	tmpPortList = append(tmpPortList, o.Http)
 	if o.Https == 0 {
 		o.Https = 443
 	}
+	tmpPortList = append(tmpPortList, o.Https)
 	if o.API == "" {
 		o.API = "127.0.0.1:2035"
+	}
+	if _, p, err := net.SplitHostPort(o.API); err != nil {
+		return errors.New("malformed api field: " + o.API)
+	} else {
+		p, err := strconv.Atoi(p)
+		if err != nil {
+			return err
+		}
+		tmpPortList = append(tmpPortList, p)
 	}
 	for i := range o.Hosts {
 		host := &o.Hosts[i]
@@ -125,6 +141,9 @@ func (o *Config) Validate() error {
 				return err
 			}
 		}
+	}
+	if dup := lo.FindDuplicates(tmpPortList); len(dup) != 0 {
+		return errors.New(fmt.Sprintf("duplicate ports to listen on: %v", dup))
 	}
 	return nil
 }
