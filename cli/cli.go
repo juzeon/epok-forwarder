@@ -37,13 +37,13 @@ func InitConfig() {
 		SetCommonHeader("Authorization", "Bearer "+apiSecret).
 		SetBaseURL(apiURL)
 }
-func validateCLiState() {
+func validateAPIState() {
 	if apiURL == "" {
 		util.ErrExit(errors.New("EPOK_API is not set"))
 	}
 }
 func Reload() {
-	validateCLiState()
+	validateAPIState()
 	resp, err := client.R().Post("/api/reload")
 	if err != nil {
 		util.ErrExit(err)
