@@ -12,18 +12,29 @@ import (
 	"os"
 )
 
-var configFile string
-var reload bool
+type Flags struct {
+	configFile string
+	reload     bool
+	help       bool
+	generate   bool
+}
 
 func main() { // TODO block based on geo
-	flag.StringVar(&configFile, "c", "config.yml", "config file")
-	flag.BoolVar(&reload, "r", false, "perform hot reload")
+	var flg Flags
+	flag.StringVar(&flg.configFile, "c", "config.yml", "specify a config file")
+	flag.BoolVar(&flg.reload, "r", false, "perform hot reload")
+	flag.BoolVar(&flg.help, "h", false, "get help")
+	flag.BoolVar(&flg.generate, "g", false, "generate cli env based on the config file")
 	flag.Parse()
 	cli.InitConfig()
-	if reload {
+	if flg.reload {
 		cli.Reload()
 	}
-	configData, err := os.ReadFile(configFile)
+	if flg.help {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+	configData, err := os.ReadFile(flg.configFile)
 	if err != nil {
 		util.ErrExit(err)
 	}
@@ -31,6 +42,9 @@ func main() { // TODO block based on geo
 	err = yaml.Unmarshal(configData, &config)
 	if err != nil {
 		util.ErrExit(err)
+	}
+	if flg.generate {
+		cli.Generate(config.BaseConfig)
 	}
 	slog.Info("Starting forwarder...")
 	fwd, err := forwarder.New(config)
@@ -42,7 +56,7 @@ func main() { // TODO block based on geo
 		util.ErrExit(err)
 	}
 	slog.Info("All listeners are on.")
-	err = api.StartServer(configFile, config, fwd)
+	err = api.StartServer(flg.configFile, config, fwd)
 	if err != nil {
 		util.ErrExit(err)
 	}

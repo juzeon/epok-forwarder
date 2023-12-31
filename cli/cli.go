@@ -2,8 +2,10 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"github.com/imroc/req/v3"
 	"github.com/joho/godotenv"
+	"github.com/juzeon/epok-forwarder/data"
 	"github.com/juzeon/epok-forwarder/util"
 	"log/slog"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"time"
 )
 
+var envFile string
 var apiURL string
 var apiSecret string
 var client *req.Client
@@ -21,7 +24,7 @@ func InitConfig() {
 	if err != nil {
 		util.ErrExit(err)
 	}
-	envFile := path.Join(home, ".config/epok-forwarder/.env")
+	envFile = path.Join(home, ".config/epok-forwarder/.env")
 	err = os.MkdirAll(path.Dir(envFile), 0755)
 	if err != nil {
 		util.ErrExit(err)
@@ -53,4 +56,14 @@ func Reload() {
 		slog.Error("Error hot reload: " + res)
 		os.Exit(1)
 	}
+}
+func Generate(baseConfig data.BaseConfig) {
+	err := os.WriteFile(envFile, []byte(fmt.Sprintf(`EPOK_API=%s
+EPOK_SECRET=%s
+`, "http://"+baseConfig.API, baseConfig.Secret)), 0644)
+	if err != nil {
+		util.ErrExit(err)
+	}
+	slog.Info("Generated env file: " + envFile)
+	os.Exit(0)
 }
