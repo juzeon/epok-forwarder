@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
 func StartServer(configFile string, config data.Config, forwarderIns *forwarder.Forwarder) error {
@@ -31,15 +30,6 @@ func StartServer(configFile string, config data.Config, forwarderIns *forwarder.
 				return
 			}
 		}
-		slog.Info("Stopping previous forwarder instance...")
-		if err := forwarderIns.Stop(); err != nil {
-			writer.WriteHeader(500)
-			writer.Write([]byte(err.Error()))
-			return
-		}
-
-		time.Sleep(500 * time.Millisecond)
-
 		v, err := os.ReadFile(configFile)
 		if err != nil {
 			writer.WriteHeader(500)
@@ -53,11 +43,16 @@ func StartServer(configFile string, config data.Config, forwarderIns *forwarder.
 			writer.Write([]byte(err.Error()))
 			return
 		}
+		slog.Info("Stopping previous forwarder instance...")
+		if err := forwarderIns.Stop(); err != nil {
+			writer.WriteHeader(500)
+			writer.Write([]byte(err.Error()))
+			return
+		}
 		slog.Info("Starting new forwarder instance...")
 		if fwd, err := startForwarderWithConfig(newConfig); err != nil {
 			// revert
 			slog.Error("Could not start new forwarder, reverting...", "error", err)
-			time.Sleep(500 * time.Millisecond)
 			fwd0, err0 := startForwarderWithConfig(config)
 			if err0 != nil {
 				util.ErrExit(fmt.Errorf("failed to revert: %w", err0))
