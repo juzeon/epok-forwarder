@@ -12,10 +12,14 @@ go install github.com/juzeon/epok-forwarder@latest
 
 ## Configure
 
+### Daemon
+
 ```yaml
 # config.yml
 
 # Assume the server address is 1.1.1.1
+api: 127.0.0.1:2035 # API binding addr. Default to 127.0.0.1:2035
+secret: epok # Optional but recommended
 http: 80 # Optional. Default to 80
 https: 443 # Optional. Default to 443
 hosts:
@@ -36,11 +40,35 @@ hosts:
           - ?gg.com # Will match egg.com, ogg.com, etc
 ```
 
+### CLI
+
+The configuration of CLI is in `$HOME/.config/epok-forwarder/.env`:
+
+```bash
+EPOK_API=http://127.0.0.1:2035
+EPOK_SECRET=epok
+```
+
+CLI is used for calling the API, performing hot reload, etc.
+
 ## Run
+
+### Daemon
 
 ```bash
 ./epok-forwarder -c my_config.yml # Specify a configuration file
 # Or
 ./epok-forwarder # Use config.yml in the current directory automatically
+```
+
+### CLI
+
+```bash
+./epok-forwarder
+  -c string
+    	specify a config file (default "config.yml")
+  -g	generate cli env based on the config file
+  -h	get help
+  -r	perform hot reload
 ```
 
