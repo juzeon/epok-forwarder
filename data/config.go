@@ -10,8 +10,8 @@ import (
 )
 
 type Config struct {
-	BaseConfig
-	Hosts []Host `yaml:"hosts"`
+	BaseConfig `yaml:",inline"`
+	Hosts      []Host `yaml:"hosts"`
 }
 type BaseConfig struct {
 	Http   int    `yaml:"http"`
