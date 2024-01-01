@@ -3,6 +3,7 @@ package data
 import (
 	"errors"
 	"fmt"
+	"github.com/juzeon/epok-forwarder/geo"
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 	"net"
@@ -16,20 +17,23 @@ type Config struct {
 	Hosts      []Host `yaml:"hosts"`
 }
 type BaseConfig struct {
-	Http   int    `yaml:"http"`
-	Https  int    `yaml:"https"`
-	API    string `yaml:"api"`
-	Secret string `yaml:"secret"`
+	Http     int    `yaml:"http"`
+	Https    int    `yaml:"https"`
+	API      string `yaml:"api"`
+	Secret   string `yaml:"secret"`
+	Firewall `yaml:",inline"`
 }
 type Host struct {
 	Host     string    `yaml:"host"`
 	Forwards []Forward `yaml:"forwards"`
+	Firewall `yaml:",inline"`
 }
 type Forward struct {
 	Type             string `yaml:"type"`
 	ForwardWeb       `yaml:",inline"`
 	ForwardPortRange `yaml:"port_range,omitempty"`
 	ForwardPort      `yaml:",inline"`
+	Firewall         `yaml:",inline"`
 }
 
 var tmpPortList []int
@@ -148,6 +152,52 @@ func (o *Config) Validate() error {
 		return errors.New(fmt.Sprintf("duplicate ports to listen on: %v", dup))
 	}
 	return nil
+}
+
+type Firewall struct {
+	Allow string `yaml:"allow"`
+	Deny  string `yaml:"deny"`
+}
+
+func (o *Firewall) CheckAllow(ip net.IP) (allow bool, reason string) {
+	getList := func(str string) []string {
+		str = strings.ToUpper(str)
+		arr := strings.Split(str, ",")
+		arr = lo.Filter(
+			lo.Map(arr, func(item string, index int) string {
+				return strings.TrimSpace(item)
+			}),
+			func(item string, index int) bool {
+				return item != ""
+			},
+		)
+		return arr
+	}
+	ipGeo := geo.GetCountryCode(ip.String())
+	process := func(rules string, allow *bool, allowSet bool, reason *string) {
+		for _, item := range getList(rules) {
+			if item == ip.String() {
+				*allow = allowSet
+				*reason = FirewallReasonIPAddress
+				break
+			}
+			if item == ipGeo {
+				*allow = allowSet
+				*reason = FirewallReasonGeo
+				break
+			}
+			if _, c, _ := net.ParseCIDR(item); c != nil && c.Contains(ip) {
+				*allow = allowSet
+				*reason = FirewallReasonIPCIDR
+				break
+			}
+		}
+	}
+	allow = true
+	reason = FirewallReasonDefault
+	process(o.Deny, &allow, false, &reason)
+	process(o.Allow, &allow, true, &reason)
+	return allow, reason
 }
 
 func ReadConfig(configFile string) (Config, error) {
