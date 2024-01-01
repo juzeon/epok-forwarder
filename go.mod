@@ -7,6 +7,7 @@ require (
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
 	github.com/imroc/req/v3 v3.42.2
 	github.com/joho/godotenv v1.5.1
+	github.com/oschwald/geoip2-golang v1.9.0
 	github.com/samber/lo v1.39.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -23,6 +24,7 @@ require (
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.12.0 // indirect
+	github.com/oschwald/maxminddb-golang v1.11.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.3 // indirect
 	github.com/quic-go/quic-go v0.38.1 // indirect

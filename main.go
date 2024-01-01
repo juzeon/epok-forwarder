@@ -6,6 +6,7 @@ import (
 	"github.com/juzeon/epok-forwarder/cli"
 	"github.com/juzeon/epok-forwarder/data"
 	"github.com/juzeon/epok-forwarder/forwarder"
+	"github.com/juzeon/epok-forwarder/geo"
 	"github.com/juzeon/epok-forwarder/util"
 	"log/slog"
 	"os"
@@ -40,6 +41,7 @@ func main() { // TODO block based on geo
 	if flg.generate {
 		cli.Generate(config.BaseConfig)
 	}
+	geo.Setup()
 	slog.Info("Starting forwarder...")
 	fwd, err := forwarder.New(config)
 	if err != nil {
