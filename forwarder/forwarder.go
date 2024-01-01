@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/juzeon/epok-forwarder/data"
 	"log/slog"
+	"sync"
 )
 
 type Forwarder struct {
@@ -13,11 +14,13 @@ type Forwarder struct {
 	ctx            context.Context
 	cancelFunc     context.CancelFunc
 	webForwarder   *WebForwarder
+	waitGroup      *sync.WaitGroup
 }
 
 func New(config data.Config) (*Forwarder, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	webForwarder, err := NewWebForwarder(ctx, config.BaseConfig)
+	waitGroup := &sync.WaitGroup{}
+	webForwarder, err := NewWebForwarder(ctx, config.BaseConfig, waitGroup)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -28,6 +31,7 @@ func New(config data.Config) (*Forwarder, error) {
 		ctx:            ctx,
 		cancelFunc:     cancel,
 		webForwarder:   webForwarder,
+		waitGroup:      waitGroup,
 	}, nil
 }
 func (o *Forwarder) Stop() error {
@@ -37,12 +41,13 @@ func (o *Forwarder) Stop() error {
 	default:
 		slog.Info("Shutting down all listeners...")
 		o.cancelFunc()
+		o.waitGroup.Wait()
 	}
 	return nil
 }
 func (o *Forwarder) StartAsync() error {
 	for _, host := range o.config.Hosts {
-		hf, err := NewHostForwarder(o.ctx, o.config.BaseConfig, host, o.webForwarder)
+		hf, err := NewHostForwarder(o.ctx, o.config.BaseConfig, host, o.webForwarder, o.waitGroup)
 		if err != nil {
 			o.cancelFunc()
 			return err

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
+	"sync"
 )
 
 type HostForwarder struct {
@@ -15,10 +16,11 @@ type HostForwarder struct {
 	hostConfig data.Host
 	dstIP      string
 	ctx        context.Context
+	waitGroup  *sync.WaitGroup
 }
 
 func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfig data.Host,
-	webForwarder *WebForwarder) (*HostForwarder, error) {
+	webForwarder *WebForwarder, waitGroup *sync.WaitGroup) (*HostForwarder, error) {
 	addr, err := net.LookupHost(hostConfig.Host)
 	if err != nil {
 		return nil, err
@@ -28,6 +30,7 @@ func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfi
 		hostConfig: hostConfig,
 		dstIP:      addr[0],
 		ctx:        ctx,
+		waitGroup:  waitGroup,
 	}
 	for _, forward := range hostConfig.Forwards {
 		switch forward.Type {
@@ -66,10 +69,12 @@ func (o *HostForwarder) forwardUDPAsync(srcPort int, dstPort int) error {
 	if err != nil {
 		return err
 	}
+	o.waitGroup.Add(1)
 	go func() {
 		<-o.ctx.Done()
 		f.Close()
 		slog.Info("Close udp listener", "src-port", srcPort, "dst-port", dstPort, "dst-ip", o.dstIP)
+		o.waitGroup.Done()
 	}()
 	return nil
 }
@@ -79,9 +84,12 @@ func (o *HostForwarder) forwardTCPAsync(srcPort int, dstPort int) error {
 	if err != nil {
 		return err
 	}
+	o.waitGroup.Add(1)
 	go func() {
 		<-o.ctx.Done()
 		l.Close()
+		slog.Info("Close tcp listener", "src-port", srcPort, "dst-port", dstPort, "dst-ip", o.dstIP)
+		o.waitGroup.Done()
 	}()
 	go func() {
 		defer l.Close()

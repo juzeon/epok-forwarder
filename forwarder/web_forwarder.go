@@ -21,14 +21,16 @@ type WebForwarder struct {
 	baseConfig     data.BaseConfig
 	targets        []data.WebForwardTarget
 	reverseProxies sync.Map
+	waitGroup      *sync.WaitGroup
 }
 
-func NewWebForwarder(ctx context.Context, baseConfig data.BaseConfig) (*WebForwarder, error) {
+func NewWebForwarder(ctx context.Context, baseConfig data.BaseConfig, waitGroup *sync.WaitGroup) (*WebForwarder, error) {
 	return &WebForwarder{
 		ctx:            ctx,
 		baseConfig:     baseConfig,
 		targets:        nil,
 		reverseProxies: sync.Map{},
+		waitGroup:      waitGroup,
 	}, nil
 }
 func (o *WebForwarder) RegisterTarget(hostname string, dstIP string, dstHttpPort int, dstHttpsPort int) {
@@ -95,9 +97,11 @@ func (o *WebForwarder) startHttpsAsync() error {
 			backendConn.Close()
 		}()
 	}
+	o.waitGroup.Add(1)
 	go func() {
 		<-o.ctx.Done()
 		l.Close()
+		o.waitGroup.Done()
 	}()
 	go func() {
 		for {
@@ -151,9 +155,11 @@ func (o *WebForwarder) startHttpAsync() error {
 	if err != nil {
 		return err
 	}
+	o.waitGroup.Add(1)
 	go func() {
 		<-o.ctx.Done()
 		l.Close()
+		o.waitGroup.Done()
 	}()
 	go func() {
 		err = server.Serve(l)
