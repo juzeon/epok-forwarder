@@ -9,7 +9,7 @@ import (
 	"github.com/juzeon/epok-forwarder/util"
 	"log/slog"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -25,8 +25,8 @@ func InitConfig() {
 		slog.Error("Could not get home dir", "err", err)
 		return
 	}
-	envFile = path.Join(home, ".config/epok-forwarder/.env")
-	err = os.MkdirAll(path.Dir(envFile), 0755)
+	envFile = filepath.Join(home, ".config/epok-forwarder/.env")
+	err = os.MkdirAll(filepath.Dir(envFile), 0755)
 	if err != nil {
 		util.ErrExit(err)
 	}
