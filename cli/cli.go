@@ -22,7 +22,8 @@ var client *req.Client
 func InitConfig() {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		util.ErrExit(err)
+		slog.Error("Could not get home dir", "err", err)
+		return
 	}
 	envFile = path.Join(home, ".config/epok-forwarder/.env")
 	err = os.MkdirAll(path.Dir(envFile), 0755)
