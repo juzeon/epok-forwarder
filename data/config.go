@@ -31,6 +31,7 @@ type Host struct {
 }
 type Forward struct {
 	Type             string `yaml:"type"`
+	DisableUDP       bool   `yaml:"disable_udp"`
 	ForwardWeb       `yaml:",inline"`
 	ForwardPortRange `yaml:"port_range,omitempty"`
 	ForwardPort      `yaml:",inline"`

@@ -44,8 +44,10 @@ func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfi
 			if err = hf.forwardTCPAsync(forward.ForwardPort.Src, forward.ForwardPort.Dst, firewallArray); err != nil {
 				return nil, err
 			}
-			if err = hf.forwardUDPAsync(forward.ForwardPort.Src, forward.ForwardPort.Dst); err != nil {
-				return nil, err
+			if !forward.DisableUDP {
+				if err = hf.forwardUDPAsync(forward.ForwardPort.Src, forward.ForwardPort.Dst); err != nil {
+					return nil, err
+				}
 			}
 		case data.ForwardTypePortRange:
 			ports, err := forward.ForwardPortRange.GetPorts()
@@ -56,8 +58,10 @@ func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfi
 				if err = hf.forwardTCPAsync(port, port, firewallArray); err != nil {
 					return nil, err
 				}
-				if err = hf.forwardUDPAsync(port, port); err != nil {
-					return nil, err
+				if !forward.DisableUDP {
+					if err = hf.forwardUDPAsync(port, port); err != nil {
+						return nil, err
+					}
 				}
 			}
 		case data.ForwardTypeWeb:
