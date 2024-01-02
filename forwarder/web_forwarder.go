@@ -136,6 +136,9 @@ func (o *WebForwarder) startHttpAsync() error {
 		writer.Write([]byte(msg))
 	}
 	server := http.Server{
+		ReadTimeout:  20 * time.Second,
+		WriteTimeout: 20 * time.Second,
+		IdleTimeout:  120 * time.Second,
 		Handler: http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			target, ok := lo.Find(o.targets, func(item data.WebForwardTarget) bool {
 				return wildcard.Match(item.Hostname, request.Host)
