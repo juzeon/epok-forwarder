@@ -24,7 +24,7 @@ secret: epok # Optional but recommended
 http: 80 # Optional. Default to 80
 https: 443 # Optional. Default to 443
 
-deny: cn,8.8.8.8 # Optional. Can be IP CIDR, country code or IP address, separated by commas. Default to allowing all connections
+deny: cn,8.8.8.8 # Optional. Can be IP CIDR, country code (two letters) or IP address, separated by commas. Default to allowing all connections
 allow: 223.0.0.0/8 # Optional.
 
 hosts:
