@@ -33,9 +33,15 @@ func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfi
 		waitGroup:  waitGroup,
 	}
 	for _, forward := range hostConfig.Forwards {
+		forward := forward
+		firewallArray := data.FirewallArray{
+			baseConfig.Firewall,
+			hostConfig.Firewall,
+			forward.Firewall,
+		}
 		switch forward.Type {
 		case data.ForwardTypePort:
-			if err = hf.forwardTCPAsync(forward.ForwardPort.Src, forward.ForwardPort.Dst); err != nil {
+			if err = hf.forwardTCPAsync(forward.ForwardPort.Src, forward.ForwardPort.Dst, firewallArray); err != nil {
 				return nil, err
 			}
 			if err = hf.forwardUDPAsync(forward.ForwardPort.Src, forward.ForwardPort.Dst); err != nil {
@@ -47,7 +53,7 @@ func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfi
 				return nil, err
 			}
 			for _, port := range ports {
-				if err = hf.forwardTCPAsync(port, port); err != nil {
+				if err = hf.forwardTCPAsync(port, port, firewallArray); err != nil {
 					return nil, err
 				}
 				if err = hf.forwardUDPAsync(port, port); err != nil {
@@ -56,7 +62,8 @@ func NewHostForwarder(ctx context.Context, baseConfig data.BaseConfig, hostConfi
 			}
 		case data.ForwardTypeWeb:
 			for _, hostname := range forward.ForwardWeb.Hostnames {
-				webForwarder.RegisterTarget(hostname, hf.dstIP, forward.ForwardWeb.Http, forward.ForwardWeb.Https)
+				webForwarder.RegisterTarget(hostname, hf.dstIP, forward.ForwardWeb.Http, forward.ForwardWeb.Https,
+					firewallArray)
 			}
 		}
 	}
@@ -78,7 +85,7 @@ func (o *HostForwarder) forwardUDPAsync(srcPort int, dstPort int) error {
 	}()
 	return nil
 }
-func (o *HostForwarder) forwardTCPAsync(srcPort int, dstPort int) error {
+func (o *HostForwarder) forwardTCPAsync(srcPort int, dstPort int, firewallArray data.FirewallArray) error {
 	slog.Info("Register tcp forwarder", "src-port", srcPort, "dst-port", dstPort, "dst-ip", o.dstIP)
 	l, err := net.Listen("tcp", ":"+strconv.Itoa(srcPort))
 	if err != nil {
@@ -100,7 +107,13 @@ func (o *HostForwarder) forwardTCPAsync(srcPort int, dstPort int) error {
 				slog.Warn("Cannot accept conn", "error", err)
 				break
 			}
-			slog.Info("Accept connection", "addr", l.Addr().String())
+			allow, reason := firewallArray.CheckAllowByAddr(acceptedConn.RemoteAddr().String())
+			if !allow {
+				slog.Warn("Deny conn", "reason", reason)
+				acceptedConn.Close()
+				continue
+			}
+			slog.Info("Accept connection", "addr", l.Addr().String(), "reason", reason)
 			dialedConn, err := (&net.Dialer{}).DialContext(o.ctx, "tcp",
 				net.JoinHostPort(o.dstIP, strconv.Itoa(dstPort)))
 			if err != nil {

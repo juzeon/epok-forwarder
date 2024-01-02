@@ -6,6 +6,7 @@ import (
 	"github.com/juzeon/epok-forwarder/geo"
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
+	"log/slog"
 	"net"
 	"os"
 	"strconv"
@@ -215,6 +216,14 @@ func (f FirewallArray) CheckAllow(ip net.IP) (allow bool, reason string) {
 		}
 	}
 	return allow, reason
+}
+func (f FirewallArray) CheckAllowByAddr(addrString string) (allow bool, reason string) {
+	h, _, err := net.SplitHostPort(addrString)
+	if err != nil {
+		slog.Warn("Could not split host port", "err", err)
+		return true, FirewallReasonInternalError
+	}
+	return f.CheckAllow(net.ParseIP(h))
 }
 
 func ReadConfig(configFile string) (Config, error) {

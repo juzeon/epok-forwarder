@@ -7,8 +7,9 @@ const (
 )
 
 const (
-	FirewallReasonDefault   = "default"
-	FirewallReasonIPAddress = "IP address"
-	FirewallReasonGeo       = "geo"
-	FirewallReasonIPCIDR    = "IP CIDR"
+	FirewallReasonDefault       = "default"
+	FirewallReasonIPAddress     = "IP address"
+	FirewallReasonGeo           = "geo"
+	FirewallReasonIPCIDR        = "IP CIDR"
+	FirewallReasonInternalError = "internal error"
 )

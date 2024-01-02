@@ -33,12 +33,14 @@ func NewWebForwarder(ctx context.Context, baseConfig data.BaseConfig, waitGroup 
 		waitGroup:      waitGroup,
 	}, nil
 }
-func (o *WebForwarder) RegisterTarget(hostname string, dstIP string, dstHttpPort int, dstHttpsPort int) {
+func (o *WebForwarder) RegisterTarget(hostname string, dstIP string, dstHttpPort int, dstHttpsPort int,
+	firewallArray data.FirewallArray) {
 	target := data.WebForwardTarget{
-		Hostname:     hostname,
-		DstIP:        dstIP,
-		DstHttpPort:  dstHttpPort,
-		DstHttpsPort: dstHttpsPort,
+		Hostname:      hostname,
+		DstIP:         dstIP,
+		DstHttpPort:   dstHttpPort,
+		DstHttpsPort:  dstHttpsPort,
+		FirewallArray: firewallArray,
 	}
 	slog.Info("Register web forwarder", "target", target)
 	o.targets = append(o.targets, target)
@@ -58,6 +60,12 @@ func (o *WebForwarder) startHttpsAsync() error {
 		return err
 	}
 	handleConnection := func(clientConn net.Conn) {
+		streaming := false
+		defer func() {
+			if !streaming {
+				clientConn.Close()
+			}
+		}()
 		if err := clientConn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 			slog.Warn("Cannot set read deadline", "err", err)
 			return
@@ -78,6 +86,11 @@ func (o *WebForwarder) startHttpsAsync() error {
 			slog.Warn("No hostname matches", "hostname", clientHello.ServerName)
 			return
 		}
+		allow, reason := target.FirewallArray.CheckAllowByAddr(clientConn.RemoteAddr().String())
+		if !allow {
+			slog.Warn("Deny https conn", "reason", reason)
+			return
+		}
 		dest := net.JoinHostPort(target.DstIP, strconv.Itoa(target.DstHttpsPort))
 		slog.Info("Serve https", "dest", dest, "hostname", clientHello.ServerName)
 		backendConn, err := net.DialTimeout("tcp", dest,
@@ -86,6 +99,7 @@ func (o *WebForwarder) startHttpsAsync() error {
 			slog.Warn("Cannot dial backend", "err", err)
 			return
 		}
+		streaming = true
 		go func() {
 			io.Copy(clientConn, backendConn)
 			clientConn.Close()
@@ -128,6 +142,11 @@ func (o *WebForwarder) startHttpAsync() error {
 			})
 			if !ok {
 				handleErr(writer, "no hostname matches "+request.Host)
+				return
+			}
+			allow, reason := target.FirewallArray.CheckAllowByAddr(request.RemoteAddr)
+			if !allow {
+				slog.Warn("Deny http conn", "reason", reason)
 				return
 			}
 			dest := "http://" + net.JoinHostPort(target.DstIP, strconv.Itoa(target.DstHttpPort))
