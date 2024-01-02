@@ -92,7 +92,7 @@ func (o *WebForwarder) startHttpsAsync() error {
 			return
 		}
 		dest := net.JoinHostPort(target.DstIP, strconv.Itoa(target.DstHttpsPort))
-		slog.Info("Serve https", "dest", dest, "hostname", clientHello.ServerName)
+		slog.Info("Serve https", "dest", dest, "hostname", clientHello.ServerName, "reason", reason)
 		backendConn, err := net.DialTimeout("tcp", dest,
 			5*time.Second)
 		if err != nil {
@@ -163,7 +163,7 @@ func (o *WebForwarder) startHttpAsync() error {
 			}
 			actualR, _ := o.reverseProxies.LoadOrStore(dest, r)
 			r = actualR.(*httputil.ReverseProxy)
-			slog.Info("Serve http", "dest", dest, "hostname", target.Hostname)
+			slog.Info("Serve http", "dest", dest, "hostname", target.Hostname, "reason", reason)
 			r.ServeHTTP(writer, request)
 		}),
 		BaseContext: func(listener net.Listener) context.Context {
