@@ -39,3 +39,72 @@ func TestFirewall(t *testing.T) {
 	assert.Equal(t, false, a)
 	assert.Equal(t, FirewallReasonIPAddress, r)
 }
+func TestFirewallArray(t *testing.T) {
+	geo.Setup()
+	ip := net.ParseIP("223.5.5.5")
+	fa := FirewallArray{
+		Firewall{
+			Allow: "",
+			Deny:  "cn",
+		},
+		Firewall{
+			Allow: "223.0.0.0/8",
+			Deny:  "",
+		},
+	}
+	a, r := fa.CheckAllow(ip)
+	assert.Equal(t, true, a)
+	assert.Equal(t, FirewallReasonIPCIDR, r)
+	fa = FirewallArray{
+		Firewall{
+			Allow: "0.0.0.0/0",
+			Deny:  "us",
+		},
+		Firewall{
+			Allow: "",
+			Deny:  "223.5.5.5",
+		},
+	}
+	a, r = fa.CheckAllow(ip)
+	assert.Equal(t, false, a)
+	assert.Equal(t, FirewallReasonIPAddress, r)
+	fa = FirewallArray{
+		Firewall{
+			Allow: "",
+			Deny:  "us",
+		},
+		Firewall{
+			Allow: "",
+			Deny:  "223.6.6.6",
+		},
+	}
+	a, r = fa.CheckAllow(ip)
+	assert.Equal(t, true, a)
+	assert.Equal(t, FirewallReasonDefault, r)
+	fa = FirewallArray{
+		Firewall{
+			Allow: "223.5.5.5",
+			Deny:  "",
+		},
+		Firewall{
+			Allow: "",
+			Deny:  "cn",
+		},
+	}
+	a, r = fa.CheckAllow(ip)
+	assert.Equal(t, false, a)
+	assert.Equal(t, FirewallReasonGeo, r)
+	fa = FirewallArray{
+		Firewall{
+			Allow: "",
+			Deny:  "",
+		},
+		Firewall{
+			Allow: "",
+			Deny:  "",
+		},
+	}
+	a, r = fa.CheckAllow(ip)
+	assert.Equal(t, true, a)
+	assert.Equal(t, FirewallReasonDefault, r)
+}

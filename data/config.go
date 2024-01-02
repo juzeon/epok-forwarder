@@ -200,6 +200,23 @@ func (o *Firewall) CheckAllow(ip net.IP) (allow bool, reason string) {
 	return allow, reason
 }
 
+type FirewallArray []Firewall
+
+func (f FirewallArray) CheckAllow(ip net.IP) (allow bool, reason string) {
+	allow = true
+	reason = FirewallReasonDefault
+	for _, firewall := range f {
+		if a, r := firewall.CheckAllow(ip); !a { // deny on this level
+			allow = a
+			reason = r
+		} else if r != FirewallReasonDefault { // allow explicitly on this level
+			allow = a
+			reason = r
+		}
+	}
+	return allow, reason
+}
+
 func ReadConfig(configFile string) (Config, error) {
 	var empty Config
 	configData, err := os.ReadFile(configFile)
